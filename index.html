@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apple Podcast Transcript Viewer</title>
   <link rel="icon" type="image/png" href="/projects/podcasts/favicons/favicon-96x96.png" sizes="96x96" />
@@ -21,54 +21,6 @@
   <meta name="description" content="View and copy Apple Podcast transcripts.">
 
   <style>
-    .podcast, .noPodcasts {
-      overflow: hidden;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 15px 10px;
-      background-color: white;
-      max-width: 800px;
-
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-
-      transition: 0.3s ease;
-    }
-    .podcast {
-      cursor: pointer;
-    }
-    .podcast:hover {
-      transform: scale(1.03);
-    }
-    .speaker {
-      background-color: #999;
-      padding: 3px;
-      display: inline-block;
-      margin: 3px 3px 3px 0;
-      border-radius: 5px;
-      user-select: none;
-    }
-    .title {
-      display: inline-block;
-      margin-bottom: 0px;
-      font-weight: bold;
-      font-size: 1.5em;
-    }
-    .author {
-      display: block;
-    }
-    .duration {
-      color: #666;
-      padding-left: 10px;
-    }
-    .date {
-      font-style: italic;
-    }
-    .info {
-      text-transform: uppercase;
-      color: #808080;
-      font-weight: bold;
-      font-size: small;
-    }
     html, body {
       height: 100%;
       overscroll-behavior-y: none;
@@ -80,12 +32,16 @@
     body {
       margin: 0px;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
     }
+    body.top {
+      justify-content: initial;
+    }
+
+    /* ── Explanation card ── */
     .explanation {
       max-width: 650px;
       margin: 5px;
@@ -94,32 +50,19 @@
       padding: 40px;
       border-radius: 25px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-
       transition: 0.3s ease;
-    }
-    body.top {
-      justify-content: initial;
     }
     .top .explanation {
       margin-top: 10px;
       padding: 20px;
       border-radius: 10px;
     }
-    .explanation h1 {
-      margin: 0;
+    .highlight .explanation {
+      padding: 60px;
+      opacity: 0.9;
     }
-    .explanation a {
-      color: #9e42cf;
-    }
-    .indicator {
-      background-color: black;
-      color: white;
-      padding: 3px;
-      display: inline-block;
-      width: 1em;
-      border-radius: 4px;
-      margin-right: 7px;
-    }
+    .explanation h1 { margin: 0; }
+    .explanation a { color: #9e42cf; }
     .explanation pre {
       background-color: #272822;
       color: white;
@@ -131,28 +74,170 @@
       font-size: 0.8em;
       margin: 40px 0 -30px 0;
     }
-    .highlight .explanation {
-      padding: 60px;
-      opacity: 0.9;
+    .indicator {
+      background-color: black;
+      color: white;
+      padding: 3px;
+      display: inline-block;
+      width: 1em;
+      border-radius: 4px;
+      margin-right: 7px;
+    }
+
+    /* ── Search bar ── */
+    #search-wrap {
+      display: none;
+      width: 100%;
+      max-width: 840px;
+      padding: 8px 10px;
+      box-sizing: border-box;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    body.top #search-wrap {
+      display: block;
+    }
+    #search {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: none;
+      font-size: 1em;
+      font-family: inherit;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      outline: none;
+    }
+    #search::placeholder { color: #aaa; }
+
+    /* ── Podcast cards ── */
+    .podcast, .noPodcasts {
+      overflow: hidden;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 8px 10px;
+      background-color: white;
+      max-width: 800px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      transition: 0.3s ease;
+    }
+    .podcast:hover {
+      transform: scale(1.01);
+    }
+    .card-header {
+      cursor: pointer;
+    }
+    .card-header:hover .title {
+      text-decoration: underline;
+    }
+    .info {
+      text-transform: uppercase;
+      color: #808080;
+      font-weight: bold;
+      font-size: small;
+    }
+    .title {
+      display: block;
+      font-weight: bold;
+      font-size: 1.5em;
+      margin: 2px 0;
+    }
+    .author {
+      display: block;
+      color: #444;
     }
     .description {
       display: -webkit-box;
-      -webkit-line-clamp: 4;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
       text-overflow: ellipsis;
-
-      margin-top: 25px;
+      margin-top: 10px;
+      color: #555;
     }
-    body.popupOpen {
+
+    /* ── Card action buttons ── */
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .card-btn {
+      font-size: 0.82em;
+      font-family: inherit;
+      border: none;
+      border-radius: 14px;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
       user-select: none;
     }
+    .btn-preview {
+      background-color: #f0e6fa;
+      color: #7826b2;
+    }
+    .btn-preview:hover {
+      background-color: #e0ccf5;
+    }
+    .btn-copy-card {
+      background-color: #f0e6fa;
+      color: #7826b2;
+    }
+    .btn-copy-card:hover {
+      background-color: #e0ccf5;
+    }
+    .btn-copy-card.copied {
+      background-color: #e6f4ea;
+      color: #2e7d32;
+    }
+    .btn-full {
+      background-color: #7826b2;
+      color: white;
+      margin-left: auto;
+    }
+    .btn-full:hover {
+      background-color: #5e1d8c;
+    }
+
+    /* ── Inline preview ── */
+    .preview-content {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background-color: #f9f4fd;
+      border-radius: 8px;
+      border-left: 3px solid #9e42cf;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+    .preview-content.open {
+      display: block;
+    }
+    .preview-speaker {
+      font-size: 0.72em;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #9e42cf;
+      margin: 12px 0 2px 0;
+    }
+    .preview-speaker:first-child { margin-top: 0; }
+    .preview-content p { margin: 0 0 4px 0; }
+    .preview-more {
+      margin-top: 10px;
+      color: #9e42cf;
+      font-size: 0.85em;
+      cursor: pointer;
+      display: inline-block;
+    }
+    .preview-more:hover { text-decoration: underline; }
+
+    /* ── Full transcript modal ── */
     #transcript {
       position: fixed;
-      height: 100%;
+      inset: 0;
       background-color: rgba(0, 0, 0, 0.6);
-      z-index: 1;
-
+      z-index: 100;
       display: none;
     }
     body.popupOpen #transcript {
@@ -168,6 +253,14 @@
       overflow: scroll;
       user-select: text;
     }
+    .transcript-speaker {
+      font-size: 0.75em;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #9e42cf;
+      margin: 16px 0 2px 0;
+    }
+    .transcript-speaker:first-child { margin-top: 0; }
     .xout {
       position: absolute;
       top: 40px;
@@ -183,7 +276,7 @@
       cursor: pointer;
       user-select: none;
     }
-    .copy-btn {
+    .modal-copy-btn {
       position: absolute;
       top: 40px;
       right: 90px;
@@ -200,22 +293,10 @@
       font-family: inherit;
       transition: background-color 0.2s ease;
     }
-    .copy-btn:hover {
-      background-color: #7826b2;
-    }
-    .copy-btn.copied {
-      background-color: #4caf50;
-    }
-    .transcript-speaker {
-      font-size: 0.75em;
-      font-weight: bold;
-      text-transform: uppercase;
-      color: #9e42cf;
-      margin: 16px 0 2px 0;
-    }
-    .transcript-speaker:first-child {
-      margin-top: 0;
-    }
+    .modal-copy-btn:hover { background-color: #7826b2; }
+    .modal-copy-btn.copied { background-color: #4caf50; }
+
+    /* ── GitHub link ── */
     .github {
       width: 20px;
       position: fixed;
@@ -229,56 +310,56 @@
       border-radius: 20px;
       transition: 0.3s ease;
     }
-    .github:hover {
-      opacity: 1;
-    }
-    .github img {
-      width: 20px;
-    }
+    .github:hover { opacity: 1; }
+    .github img { width: 20px; }
   </style>
 </head>
 <body>
   <div class="explanation">
     <h1>Apple Podcast Transcript Viewer</h1>
     <p>
-      The Apple Podcasts app on iOS and MacOS doesn't allow you easily export or copy large 
+      The Apple Podcasts app on iOS and MacOS doesn't allow you to easily export or copy large
       portions of the transcript. However it's locally stored on MacOS if you view the transcript in the app. This tool allows you to easily copy and extract them.
     </p>
     <div>
       <div><span class="indicator">1</span>Go to the episode in the <a href="podcasts://">MacOS Podcasts app</a> and click where it says 'Transcript' (or the triple dots ··· > 'View Transcript').</div>
-      <div><span class="indicator">2</span>Open a <img src="./images/finder.png" alt="Finder Icon" style="height: 1.2em; margin-bottom: -3px;"> Finder window and select 'Go' > 'Go to Folder' from the menu (or type <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd>) and enter the following:</div>
+      <div><span class="indicator">2</span>Open a <img src="./images/finder.png" alt="Finder Icon" style="height: 1.2em; margin-bottom: -3px;"> Finder window and select 'Go' > 'Go to Folder' (or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd>) and enter:</div>
       <pre><code>~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts</code></pre>
-      <div><span class="indicator">3</span>Drag and drop all the contents of that folder anywhere on this window.</div>
+      <div><span class="indicator">3</span>Drag and drop that entire folder (or its contents) anywhere on this window. The app will automatically find all transcripts inside.</div>
     </div>
     <p class="note">
       NOTE: All files are locally processed in your browser and never leave your computer.
     </p>
   </div>
-  <div id="podcasts">
+
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search by title, author, or description…" autocomplete="off" />
   </div>
+
+  <div id="podcasts"></div>
+
   <div id="transcript">
-    <button class="copy-btn">Copy</button>
+    <button class="modal-copy-btn">Copy</button>
     <span class="xout">X</span>
     <div class="content"></div>
   </div>
+
   <a class="github" href="https://github.com/dado3212/apple-podcast-transcripts" target="_blank"><img src="images/github.svg"/></a>
+
   <script src="./sql-wasm.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-M15SP790QM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-M15SP790QM');
   </script>
   <script type="module">
-    // Handle mobile apps
+    // Handle mobile / non-macOS
     if ('ontouchstart' in window || navigator.maxTouchPoints) {
       document.querySelector('.explanation').innerHTML = `
         <h1>Apple Podcast Transcript Viewer</h1>
-        <p>
-          This only supports MacOS, so try visiting this website from your laptop browser.
-        </p>`;
+        <p>This only supports MacOS, so try visiting this website from your Mac.</p>`;
     }
 
     function esc(str) {
@@ -287,46 +368,65 @@
       return d.innerHTML;
     }
 
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    function transcriptToPlainText(chunks) {
+      return chunks.map(s => {
+        const parts = [];
+        if (s.speaker) parts.push(`[${s.speaker}]`);
+        parts.push(s.sentences);
+        return parts.join('\n');
+      }).join('\n\n');
+    }
+
     const dropZone = document.body;
     const podcasts = document.getElementById('podcasts');
+    const searchInput = document.getElementById('search');
 
-    // Initialize it now so that if you go offline the webworker is set up
-    const SQL = await initSqlJs({
-      locateFile: file => `./${file}`
-    });
-    
+    // Store all transcripts for search filtering
+    let allTranscripts = [];
+
+    const SQL = await initSqlJs({ locateFile: file => `./${file}` });
+
+    // ── Drag and drop ──────────────────────────────────────────────
     dropZone.addEventListener('dragover', (event) => {
       event.preventDefault();
       dropZone.classList.add('highlight');
     });
-    
+
     dropZone.addEventListener('dragleave', () => {
       dropZone.classList.remove('highlight');
     });
-    
+
     dropZone.addEventListener('drop', async (event) => {
       event.preventDefault();
       dropZone.classList.remove('highlight');
 
       document.body.classList.add('top');
-      document.querySelector('.explanation').innerHTML = '<h1>Apple Podcast Transcript Extractor</h1>';
-
-      // Clear the current podcast list and show loading
+      document.querySelector('.explanation').innerHTML = '<h1>Apple Podcast Transcript Viewer</h1>';
       podcasts.innerHTML = '<div class="noPodcasts" style="text-align:center;">Loading transcripts…</div>';
+      searchInput.value = '';
 
       try {
         const items = event.dataTransfer.items;
-
-        // Extract the relevant info
         const queue = [];
         for (let i = 0; i < items.length; i++) {
           const entry = items[i].webkitGetAsEntry();
           if (entry) queue.push(traverseFileTree(entry));
         }
         const relevantFiles = { transcripts: {}, mainDB: null, walFile: null };
-        const result = await Promise.all(queue);
-        for (const info of result) {
-          relevantFiles['transcripts'] = { ...relevantFiles['transcripts'], ...info['transcripts'] };
+        for (const info of await Promise.all(queue)) {
+          relevantFiles.transcripts = { ...relevantFiles.transcripts, ...info.transcripts };
           if (info.mainDB) relevantFiles.mainDB = info.mainDB;
           if (info.walFile) relevantFiles.walFile = info.walFile;
         }
@@ -338,145 +438,187 @@
           db = new SQL.Database(new Uint8Array(relevantFiles.mainDB));
         }
 
-        let transcripts = {};
+        let transcriptsMap = {};
 
         if (db) {
           const keys = Object.keys(relevantFiles.transcripts).filter(k => /^\d+$/.test(k));
-          // Some of the DBs don't have the `ZFIRSTTIMEAVAILABLE` column, so check if 
-          // it exists with pragma first.
           const columns = new Set(db.exec('PRAGMA table_info(ZMTEPISODE);')[0].values.map(v => v[1]));
-          if (columns.has('ZFIRSTTIMEAVAILABLE')) {
-            const podcastInfo = db.exec(
-              `SELECT
-                ZSTORETRACKID,
-                ZAUTHOR,
-                ZCLEANEDTITLE,
-                ZITUNESSUBTITLE,
-                ZDURATION,
-                ZFIRSTTIMEAVAILABLE
-              FROM ZMTEPISODE
-              WHERE ZSTORETRACKID IN (
-                ${keys.join(', ')}
-              );
-            `);
-            // All transcripts
-            if (podcastInfo.length > 0) {
-              for (const pod of podcastInfo[0].values) {
-                transcripts[pod[0]] = {
-                  'author': pod[1],
-                  'title': pod[2],
-                  'description': pod[3],
-                  'duration': pod[4],
-                  'time': pod[5] + 978307200, // Adjust for Jan 1st time which Apple uses
-                };
-              }
-            }
-          } else {
-            const podcastInfo = db.exec(
-              `SELECT
-                ZSTORETRACKID,
-                ZAUTHOR,
-                ZCLEANEDTITLE,
-                ZITUNESSUBTITLE,
-                ZDURATION
-              FROM ZMTEPISODE
-              WHERE ZSTORETRACKID IN (
-                ${keys.join(', ')}
-              );
-            `);
-            // All transcripts
-            if (podcastInfo.length > 0) {
-              for (const pod of podcastInfo[0].values) {
-                transcripts[pod[0]] = {
-                  'author': pod[1],
-                  'title': pod[2],
-                  'description': pod[3],
-                  'duration': pod[4],
-                  'time': -1,
-                };
-              }
+          const hasTime = columns.has('ZFIRSTTIMEAVAILABLE');
+          const podcastInfo = db.exec(
+            `SELECT
+              ZSTORETRACKID,
+              ZAUTHOR,
+              ZCLEANEDTITLE,
+              ZITUNESSUBTITLE,
+              ZDURATION
+              ${hasTime ? ', ZFIRSTTIMEAVAILABLE' : ''}
+            FROM ZMTEPISODE
+            WHERE ZSTORETRACKID IN (${keys.join(', ')});`
+          );
+          if (podcastInfo.length > 0) {
+            for (const pod of podcastInfo[0].values) {
+              transcriptsMap[pod[0]] = {
+                author: pod[1],
+                title: pod[2],
+                description: pod[3],
+                duration: pod[4],
+                time: hasTime ? pod[5] + 978307200 : -1,
+              };
             }
           }
         }
+
         for (const podcastId in relevantFiles.transcripts) {
-          if (podcastId in transcripts) {
-            transcripts[podcastId]['transcripts'] = relevantFiles['transcripts'][podcastId].podcastChunks;
-            transcripts[podcastId]['lastModified'] = relevantFiles['transcripts'][podcastId].lastModified;
+          const chunks = relevantFiles.transcripts[podcastId].podcastChunks;
+          const lastModified = relevantFiles.transcripts[podcastId].lastModified;
+          if (podcastId in transcriptsMap) {
+            transcriptsMap[podcastId].transcripts = chunks;
+            transcriptsMap[podcastId].lastModified = lastModified;
           } else {
-            transcripts[podcastId] = {
-              'author': 'Unknown',
-              'title': 'Unknown',
-              'description': '',
-              'duration': -1,
-              'time': -1,
-              'transcripts' : relevantFiles['transcripts'][podcastId].podcastChunks,
-              'lastModified': relevantFiles['transcripts'][podcastId].lastModified,
+            transcriptsMap[podcastId] = {
+              author: 'Unknown', title: 'Unknown', description: '',
+              duration: -1, time: -1, transcripts: chunks, lastModified,
             };
           }
         }
 
-        // Sort it by last modified
-        transcripts = Object.fromEntries(Object.entries(transcripts)
-          .sort(([, a], [, b]) => new Date(b.lastModified) - new Date(a.lastModified)));
+        // Sort by last modified, store globally
+        allTranscripts = Object.values(transcriptsMap)
+          .sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
 
-        // Iterate over it
-        podcasts.innerHTML = '';
-        for (const transcript of Object.values(transcripts)) {
-          const podcastDiv = document.createElement("div");
-          podcastDiv.className = "podcast";
-          let description = transcript.description;
-          if (!description) {
-            // Use first few sentences from the transcript as a preview
-            description = transcript.transcripts
-              .flatMap(s => s.sentences.split(/(?<=\.)\s+/))
-              .slice(0, 3)
-              .join(' ');
-          }
-          podcastDiv.innerHTML = `
-          <div class="info">${esc(formatDate(transcript.time))} · ${esc(formatTime(transcript.duration))}</div>
-          <div class="title">${esc(transcript.title)}</div>
-          <span class="author">${esc(transcript.author)}</span>
-          <div class="description">${esc(description)}</div>
-          `;
-
-          podcastDiv.onclick = () => openTranscriptPopup(transcript.transcripts);
-
-          podcasts.appendChild(podcastDiv);
-        }
-        // If there aren't any transcripts include a little thing saying why
-        if (Object.values(transcripts).length === 0) {
-          const podcastDiv = document.createElement("div");
-          podcastDiv.className = "noPodcasts";
-          podcastDiv.style = 'text-align: center;';
-          podcastDiv.innerHTML = `
-          <div class="title" style="display: block; text-align: center;">No podcast transcripts found</div><br />
-          Make sure you followed step 1 to locally cache the transcript data so it can be read.<br /><br />
-          <div><span class="indicator">1</span>Go to the episode in the <a href="podcasts://" style="color: #9e42cf;">MacOS Podcasts app</a> and click where it says 'Transcript' (or the triple dots ··· > 'View Transcript').</div>
-          `;
-
-          podcasts.appendChild(podcastDiv);
-        }
+        renderPodcasts(allTranscripts);
       } catch (e) {
-        const podcastDiv = document.createElement("div");
-        podcastDiv.className = "noPodcasts";
-        podcastDiv.style = 'text-align: center;';
-        podcastDiv.innerHTML = `
-        <div class="title" style="display: block; text-align: center;">Something went wrong!</div><br />
-        <pre><code>${e}</code></pre>
-        <br />If you <a target="_blank" href="https://github.com/dado3212/apple-podcast-transcripts/issues">create an issue on Github with the above error</a> I can try and fix the problem!
+        podcasts.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'noPodcasts';
+        div.style = 'text-align: center;';
+        div.innerHTML = `
+          <div class="title" style="display:block;text-align:center;">Something went wrong!</div><br>
+          <pre><code>${esc(String(e))}</code></pre><br>
+          If you <a target="_blank" href="https://github.com/dado3212/apple-podcast-transcripts/issues">create an issue on Github with the above error</a> I can try and fix the problem!
         `;
-
-        podcasts.appendChild(podcastDiv);
-        console.log(e);
+        podcasts.appendChild(div);
+        console.error(e);
       }
     });
 
+    // ── Search ─────────────────────────────────────────────────────
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        renderPodcasts(allTranscripts);
+        return;
+      }
+      const filtered = allTranscripts.filter(t =>
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.author || '').toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q)
+      );
+      renderPodcasts(filtered);
+    });
+
+    // ── Render ─────────────────────────────────────────────────────
+    function renderPodcasts(list) {
+      podcasts.innerHTML = '';
+
+      if (list.length === 0) {
+        const div = document.createElement('div');
+        div.className = 'noPodcasts';
+        div.style = 'text-align: center;';
+        const isSearching = searchInput.value.trim().length > 0;
+        div.innerHTML = isSearching
+          ? `<div class="title" style="display:block;text-align:center;">No results found</div><br>Try a different keyword.`
+          : `<div class="title" style="display:block;text-align:center;">No podcast transcripts found</div><br>
+             Make sure you followed step 1 to locally cache the transcript data so it can be read.<br><br>
+             <div><span class="indicator">1</span>Go to the episode in the <a href="podcasts://" style="color:#9e42cf;">MacOS Podcasts app</a> and click where it says 'Transcript'.</div>`;
+        podcasts.appendChild(div);
+        return;
+      }
+
+      for (const transcript of list) {
+        let description = transcript.description;
+        if (!description) {
+          description = transcript.transcripts
+            .flatMap(s => s.sentences.split(/(?<=\.)\s+/))
+            .slice(0, 3)
+            .join(' ');
+        }
+
+        const card = document.createElement('div');
+        card.className = 'podcast';
+
+        // Build preview HTML (first 5 chunks)
+        const previewChunks = transcript.transcripts.slice(0, 5);
+        const previewHtml = previewChunks.map(s => {
+          const spk = s.speaker ? `<div class="preview-speaker">${esc(s.speaker)}</div>` : '';
+          return `${spk}<p>${esc(s.sentences)}</p>`;
+        }).join('');
+        const hasMore = transcript.transcripts.length > 5;
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="info">${esc(formatDate(transcript.time))} · ${esc(formatTime(transcript.duration))}</div>
+            <div class="title">${esc(transcript.title)}</div>
+            <span class="author">${esc(transcript.author)}</span>
+            <div class="description">${esc(description)}</div>
+          </div>
+          <div class="card-actions">
+            <button class="card-btn btn-preview">Preview ▾</button>
+            <button class="card-btn btn-copy-card">Copy</button>
+            <button class="card-btn btn-full">Full transcript</button>
+          </div>
+          <div class="preview-content">
+            ${previewHtml}
+            ${hasMore ? `<span class="preview-more">Open full transcript to read more…</span>` : ''}
+          </div>
+        `;
+
+        // Card header → open full modal
+        card.querySelector('.card-header').addEventListener('click', () => {
+          openTranscriptPopup(transcript.transcripts);
+        });
+
+        // Full transcript button → open modal
+        card.querySelector('.btn-full').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openTranscriptPopup(transcript.transcripts);
+        });
+
+        // Preview toggle
+        const previewBtn = card.querySelector('.btn-preview');
+        const previewDiv = card.querySelector('.preview-content');
+        previewBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const open = previewDiv.classList.toggle('open');
+          previewBtn.textContent = open ? 'Preview ▴' : 'Preview ▾';
+        });
+
+        // Copy button (no modal)
+        const copyBtn = card.querySelector('.btn-copy-card');
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          copyText(transcriptToPlainText(transcript.transcripts), copyBtn);
+        });
+
+        // "Open full transcript" link inside preview
+        const previewMore = card.querySelector('.preview-more');
+        if (previewMore) {
+          previewMore.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTranscriptPopup(transcript.transcripts);
+          });
+        }
+
+        podcasts.appendChild(card);
+      }
+    }
+
+    // ── File tree traversal ────────────────────────────────────────
     async function traverseFileTree(entry) {
       if (entry.isFile) {
         return new Promise((resolve) => {
           entry.file(async (file) => {
             const info = { transcripts: {}, mainDB: null, walFile: null };
-
             if (file.name.endsWith('.ttml')) {
               info.transcripts = await extractPodcastTranscripts(file);
             } else if (file.name === 'MTLibrary.sqlite') {
@@ -491,18 +633,15 @@
         const reader = entry.createReader();
         return new Promise((resolve) => {
           const allEntries = [];
-
-          // readEntries only returns 100 by default. You need to keep iterating
           function readAllEntries() {
             reader.readEntries(async (entries) => {
               if (entries.length === 0) {
-                // Done collecting — process all in parallel
                 const results = await Promise.all(allEntries.map(e => traverseFileTree(e)));
                 const mainInfo = { transcripts: {}, mainDB: null, walFile: null };
-                for (const subInfo of results) {
-                  mainInfo.transcripts = { ...mainInfo.transcripts, ...subInfo.transcripts };
-                  if (subInfo.mainDB) mainInfo.mainDB = subInfo.mainDB;
-                  if (subInfo.walFile) mainInfo.walFile = subInfo.walFile;
+                for (const sub of results) {
+                  mainInfo.transcripts = { ...mainInfo.transcripts, ...sub.transcripts };
+                  if (sub.mainDB) mainInfo.mainDB = sub.mainDB;
+                  if (sub.walFile) mainInfo.walFile = sub.walFile;
                 }
                 resolve(mainInfo);
               } else {
@@ -511,7 +650,6 @@
               }
             });
           }
-
           readAllEntries();
         });
       } else {
@@ -519,32 +657,27 @@
       }
     }
 
+    // ── TTML parsing ───────────────────────────────────────────────
     async function extractPodcastTranscripts(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(reader.result, "application/xml");
-          const body = xmlDoc.querySelector("body");
-
+          const xmlDoc = parser.parseFromString(reader.result, 'application/xml');
+          const body = xmlDoc.querySelector('body');
           const match = file.name.match(/(\d+)/);
           const podcastId = match ? match[1] : null;
-
           if (!body || !podcastId) return resolve({});
 
           const podcastChunks = [];
-
-          // Iterate over each speaking chunk, extracting the sentences
-          const speakingChunks = xmlDoc.querySelectorAll("p");
-          for (const speakingChunk of speakingChunks) {
-            const speaker = speakingChunk.getAttribute('ttm:agent');
-            const sentences = [...speakingChunk.querySelectorAll('span')]
+          for (const chunk of xmlDoc.querySelectorAll('p')) {
+            const speaker = chunk.getAttribute('ttm:agent');
+            const sentences = [...chunk.querySelectorAll('span')]
               .filter(sp => sp.getAttribute('podcasts:unit') === 'sentence')
               .map(sentence => [...sentence.querySelectorAll('span')].map(sp => sp.textContent).join(' '))
               .join(' ');
-              podcastChunks.push({ speaker, sentences });
+            podcastChunks.push({ speaker, sentences });
           }
-
           resolve({ [podcastId]: { podcastChunks, lastModified: file.lastModified } });
         };
         reader.onerror = reject;
@@ -552,79 +685,50 @@
       });
     }
 
+    // ── Formatters ─────────────────────────────────────────────────
     function formatTime(totalSeconds) {
-      if (totalSeconds == -1) {
-        return 'Unknown';
-      }
+      if (totalSeconds === -1) return 'Unknown';
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
-      if (hours > 0) {
-        if (minutes != 0) {
-          return `${hours} HR ${minutes} MIN`;
-        } else {
-          return `${hours} HR`;
-        }
-      } else {
-        return `${minutes} MIN`;
-      }
+      if (hours > 0) return minutes ? `${hours} HR ${minutes} MIN` : `${hours} HR`;
+      return `${minutes} MIN`;
     }
 
     function formatDate(unixTime) {
-      if (unixTime == -1) {
-        return 'Unknown';
-      }
-      let date = new Date(unixTime * 1000);
-      return date.toLocaleString('default', { month: 'long', year: 'numeric', day: 'numeric' });
+      if (unixTime === -1) return 'Unknown';
+      return new Date(unixTime * 1000).toLocaleString('default', { month: 'long', year: 'numeric', day: 'numeric' });
     }
 
-    const content = document.querySelector('#transcript .content');
-    const copyBtn = document.querySelector('.copy-btn');
+    // ── Full transcript modal ──────────────────────────────────────
+    const modalContent = document.querySelector('#transcript .content');
+    const modalCopyBtn = document.querySelector('.modal-copy-btn');
 
     document.querySelector('#transcript').addEventListener('click', (e) => {
-      if (document.body.classList.contains('popupOpen') && !content.contains(e.target) && e.target !== copyBtn) {
+      if (!modalContent.contains(e.target) && e.target !== modalCopyBtn) {
         document.body.classList.remove('popupOpen');
       }
     });
 
-    function openTranscriptPopup(transcripts) {
-      document.body.classList.add('popupOpen');
-      content.innerHTML = transcripts.map(s => {
-        const speakerHtml = s.speaker
-          ? `<div class="transcript-speaker">${esc(s.speaker)}</div>`
-          : '';
-        return `${speakerHtml}<p>${esc(s.sentences)}</p>`;
-      }).join('');
-      content.scrollTop = 0;
-
-      copyBtn.textContent = 'Copy';
-      copyBtn.classList.remove('copied');
-      copyBtn.onclick = () => {
-        const text = transcripts.map(s => {
-          const parts = [];
-          if (s.speaker) parts.push(`[${s.speaker}]`);
-          parts.push(s.sentences);
-          return parts.join('\n');
-        }).join('\n\n');
-        navigator.clipboard.writeText(text).then(() => {
-          copyBtn.textContent = 'Copied!';
-          copyBtn.classList.add('copied');
-          setTimeout(() => {
-            copyBtn.textContent = 'Copy';
-            copyBtn.classList.remove('copied');
-          }, 2000);
-        });
-      };
-    }
-
-    document.querySelector('.xout').onclick = () => {
+    document.querySelector('.xout').addEventListener('click', () => {
       document.body.classList.remove('popupOpen');
-    }
+    });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.body.classList.contains('popupOpen')) {
-        document.body.classList.remove('popupOpen');
-      }
+      if (e.key === 'Escape') document.body.classList.remove('popupOpen');
     });
+
+    function openTranscriptPopup(chunks) {
+      document.body.classList.add('popupOpen');
+      modalContent.innerHTML = chunks.map(s => {
+        const spk = s.speaker ? `<div class="transcript-speaker">${esc(s.speaker)}</div>` : '';
+        return `${spk}<p>${esc(s.sentences)}</p>`;
+      }).join('');
+      modalContent.scrollTop = 0;
+
+      modalCopyBtn.textContent = 'Copy';
+      modalCopyBtn.classList.remove('copied');
+      modalCopyBtn.onclick = () => copyText(transcriptToPlainText(chunks), modalCopyBtn);
+    }
   </script>
 </body>
 </html>
