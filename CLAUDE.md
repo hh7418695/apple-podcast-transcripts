@@ -18,15 +18,22 @@ Then open http://localhost:8000/. Note: file:// protocol does not work due to br
 
 ## Architecture
 
-The entire application is a single file: **`index.html`** (~1,563 lines containing all HTML, CSS, and JS).
+The application is a no-build static site. **`index.html`** contains the HTML, CSS, bundled sql.js script include, and a small ES module entrypoint. Application logic lives in modules under **`js/`**:
+
+- `js/file-collection.js` — file discovery, drag/drop directory traversal, file reads, and concurrency limits
+- `js/database.js` — sql.js database opening and Apple Podcasts metadata queries
+- `js/ttml-parser.js` — TTML XML parsing and transcript chunk extraction
+- `js/renderer.js` — DOM rendering, podcast cards, load/error states, and transcript modal behavior
+- `js/clipboard-download.js` — clipboard fallback UI plus TXT/audio download helpers
+- `js/utils.js` — shared helpers such as escaping, filename sanitizing, debounce, formatting, and limited concurrency
 
 **Data flow:**
 1. User drops `~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts/Library/Cache/Assets/TTML` folder
-2. `traverseFileTree()` recursively walks the dropped directory via the Web File API (`webkitGetAsEntry`)
-3. `.ttml` files → `extractPodcastTranscripts()` parses XML, extracts speaker/sentence data
-4. `MTLibrary.sqlite` + `MTLibrary.sqlite-wal` → loaded into sql.js in-memory database for episode metadata
-5. Data merged, sorted by modification date, rendered as podcast cards
-6. Clicking a card opens a modal with the full transcript
+2. `collectFromDataTransferItems()` recursively walks the dropped directory via the Web File API (`webkitGetAsEntry`)
+3. `.ttml` files → `extractPodcastTranscripts()` parses XML and extracts speaker/sentence data
+4. `MTLibrary.sqlite` + `MTLibrary.sqlite-wal` → `buildTranscriptMetadata()` loads sql.js metadata and merges it with transcript data
+5. Data is sorted by modification date and passed to `renderPodcasts()`
+6. Clicking a card opens the transcript modal created by `createTranscriptModalController()`
 
 **Key dependencies (bundled, no npm):**
 - `sql-wasm.js` + `sql-wasm.wasm` — sql.js for in-browser SQLite. **This file has been manually patched** to support WAL (Write-Ahead Logging) files. See README for the exact patch. Do not upgrade sql.js without re-applying this patch.
@@ -37,10 +44,10 @@ The entire application is a single file: **`index.html`** (~1,563 lines containi
 `sql-wasm.js` is a manually modified version of sql.js. The `Database` constructor was patched to accept a second argument (`zzz`) for the WAL file bytes, mounting it alongside the main db file. If upgrading sql.js, this patch must be re-applied (see README for the exact diff).
 
 ### SQLite Schema Variants
-The app handles two schema variants when querying `MTLibrary.sqlite` — one with `ZFIRSTTIMEAVAILABLE` column and one without. The query tries both via try/catch.
+The app handles SQLite schema variants when querying `MTLibrary.sqlite`, including optional `ZFIRSTTIMEAVAILABLE`, `ZASSETURL`, `ZENCLOSUREURL`, and `ZPODCAST` columns. Keep schema-detection logic in `js/database.js`.
 
 ### readEntries Limitation
 The `FileSystemDirectoryReader.readEntries()` API returns at most 100 entries per call. The code loops until the batch is empty to get all files — don't remove this loop.
 
 ### TTML Parsing
-TTML files are Apple's transcript format (XML-based). The parser looks for `<p>` elements with `ttm:agent` attributes (speaker) and `<span>` elements with `podcasts:unit="sentence"`.
+TTML files are Apple's transcript format (XML-based). The parser in `js/ttml-parser.js` looks for `<p>` elements with `ttm:agent` attributes (speaker) and `<span>` elements with `podcasts:unit="sentence"`.
