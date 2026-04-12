@@ -1,0 +1,13 @@
+services:
+  podcast-viewer:
+    build: .
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+    container_name: apple-podcast-transcripts
+    labels:
+      - homepage.group=本地服务
+      - homepage.name=苹果播客文本复制
+      - homepage.icon=si-podcast.png
+      - homepage.href=http://localhost:8001
+      - homepage.description=
