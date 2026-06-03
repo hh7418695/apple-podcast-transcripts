@@ -34,28 +34,30 @@ export function copyText(text, btn) {
   btn.textContent = 'Copying...';
   btn.disabled = true;
 
-  Promise.resolve()
-    .then(() => {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error('Clipboard API is unavailable. Use HTTPS or allow clipboard access.');
-      }
-      return navigator.clipboard.writeText(text);
-    })
-    .then(() => {
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = orig;
-        btn.classList.remove('copied');
-        btn.disabled = wasDisabled;
-      }, 2000);
-    })
-    .catch((error) => {
+  function onDone() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
       btn.textContent = orig;
       btn.classList.remove('copied');
       btn.disabled = wasDisabled;
-      showClipboardFallback(text, error);
-    });
+    }, 2000);
+  }
+
+  function onFail(error) {
+    btn.textContent = orig;
+    btn.classList.remove('copied');
+    btn.disabled = wasDisabled;
+    showClipboardFallback(text, error);
+  }
+
+  // Call clipboard API directly — wrapping in Promise.resolve() loses the user gesture
+  if (!navigator.clipboard?.writeText) {
+    onFail(new Error('Clipboard API is unavailable. Use HTTPS or allow clipboard access.'));
+    return;
+  }
+
+  navigator.clipboard.writeText(text).then(onDone, onFail);
 }
 
 export function downloadTextFile(title, text) {

@@ -1,0 +1,22 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Tool artifacts
+.claude/
+.codegraph/
+
+# Docker (keep Dockerfile & compose)

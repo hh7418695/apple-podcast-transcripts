@@ -1,4 +1,4 @@
-import { copyText, downloadAudioFile, downloadTextFile } from './clipboard-download.js';
+import { copyText, downloadTextFile } from './clipboard-download.js';
 import {
   createCardButton,
   esc,
@@ -40,7 +40,7 @@ function appendMetadataWarning(podcasts, metadataWarningMessage) {
   podcasts.appendChild(div);
 }
 
-export function renderPodcasts(list, { podcasts, searchInput, metadataWarningMessage, openTranscriptPopup }) {
+export function renderPodcasts(list, { podcasts, searchInput, metadataWarningMessage, openTranscriptPopup, audioPlayer }) {
   podcasts.innerHTML = '';
   appendMetadataWarning(podcasts, metadataWarningMessage);
 
@@ -98,9 +98,9 @@ export function renderPodcasts(list, { podcasts, searchInput, metadataWarningMes
       createCardButton('btn-preview', 'Preview ▾'),
       createCardButton('btn-copy-card', 'Copy'),
       createCardButton('button--info btn-download-txt', 'Download TXT'),
-      createCardButton('btn-download', 'Download Local', {
-        disabled: !transcript.audioFile,
-        title: transcript.audioFile ? 'Download local audio file' : 'No local audio file found',
+      createCardButton('button--primary btn-play', '▶ Play', {
+        disabled: (!transcript.audioFile && !safeAudioUrl) || !audioPlayer,
+        title: transcript.audioFile ? 'Play local audio' : safeAudioUrl ? 'Play from URL' : 'No audio available',
       }),
       createCardButton('button--success btn-source', 'Direct URL', {
         disabled: !safeAudioUrl,
@@ -150,11 +150,12 @@ export function renderPodcasts(list, { podcasts, searchInput, metadataWarningMes
       downloadTextFile(transcript.title, transcriptToPlainText(transcript.transcripts));
     });
 
-    const downloadBtn = card.querySelector('.btn-download');
-    if (transcript.audioFile) {
-      downloadBtn.addEventListener('click', (e) => {
+    const playBtn = card.querySelector('.btn-play');
+    if ((transcript.audioFile || safeAudioUrl) && audioPlayer) {
+      playBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        downloadAudioFile(transcript.title, transcript.audioFile);
+        const src = transcript.audioFile || safeAudioUrl;
+        audioPlayer.play(src, transcript.title);
       });
     }
 
