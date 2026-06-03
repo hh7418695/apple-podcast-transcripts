@@ -51,6 +51,28 @@ export function transcriptToPlainText(chunks) {
   }).join('\n\n');
 }
 
+export function transcriptToMarkdown(transcript) {
+  const lines = [];
+  lines.push(`# ${transcript.title || 'Untitled'}`);
+  const meta = [];
+  if (transcript.author && transcript.author !== 'Unknown') meta.push(`**${transcript.author}**`);
+  if (transcript.time > 0) meta.push(formatDate(transcript.time));
+  if (transcript.duration > 0) meta.push(formatTime(transcript.duration));
+  if (transcript.appleLink) meta.push(`[Apple Podcasts](${transcript.appleLink})`);
+  if (meta.length) lines.push(meta.join(' · '));
+  lines.push('');
+
+  for (const chunk of transcript.transcripts) {
+    if (chunk.speaker) {
+      lines.push(`**${chunk.speaker}**`);
+      lines.push('');
+    }
+    lines.push(chunk.sentences);
+    lines.push('');
+  }
+  return lines.join('\n').trim();
+}
+
 export function debounce(fn, delay) {
   let timeoutId;
   return function debounced(...args) {

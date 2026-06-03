@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">🌓</button>
   <div class="explanation">
     <h1>Apple Podcast Transcript Viewer</h1>
     <p class="intro-only">
@@ -37,6 +38,7 @@
     </div>
     <div class="folder-picker">
       <button id="selectFolderBtn" class="button button--primary folder-select-btn" type="button">Select Folder</button>
+      <button id="resetBtn" class="button folder-select-btn" type="button" style="display:none;font-size:1em;border-radius:20px;padding:10px 20px;">Reset</button>
       <div class="folder-hint">
         Target path
         <code class="folder-path">~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts/Library/Cache/Assets/TTML</code>
@@ -61,14 +63,29 @@
 
   <div id="search-wrap">
     <input id="search" type="text" placeholder="Search by title, author, or description…" autocomplete="off" />
+    <select id="sortSelect" class="sort-select" aria-label="Sort order">
+      <option value="date-desc">Date (newest)</option>
+      <option value="date-asc">Date (oldest)</option>
+      <option value="title-asc">Title A–Z</option>
+      <option value="title-desc">Title Z–A</option>
+      <option value="author-asc">Author A–Z</option>
+      <option value="duration-desc">Duration (longest)</option>
+      <option value="duration-asc">Duration (shortest)</option>
+    </select>
   </div>
 
   <div id="podcasts"></div>
 
   <div id="transcript" role="dialog" aria-modal="true" aria-labelledby="transcript-title">
     <h2 id="transcript-title" class="sr-only">Full transcript</h2>
-    <button class="button button--primary modal-copy-btn" type="button">Copy</button>
-    <button class="xout" type="button" aria-label="Close transcript">X</button>
+    <div class="modal-toolbar">
+      <div class="modal-toolbar-group modal-toolbar-actions">
+        <button class="button button--primary modal-copy-btn" type="button">Copy</button>
+      </div>
+      <div class="modal-toolbar-group modal-toolbar-extras"></div>
+      <div class="modal-toolbar-spacer"></div>
+      <button class="xout" type="button" aria-label="Close transcript">✕</button>
+    </div>
     <div class="content"></div>
   </div>
 

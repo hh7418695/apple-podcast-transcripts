@@ -18,7 +18,11 @@ export function createAudioPlayer() {
   let currentTimeEl = null;
   let durationEl = null;
   let closeBtn = null;
+  let volumeSlider = null;
+  let volumeIcon = null;
+  let savedVolume = 1;
   let isDragging = false;
+  let onTimeUpdateCb = null;
 
   function buildUI() {
     if (container) return;
@@ -58,7 +62,20 @@ export function createAudioPlayer() {
     closeBtn.textContent = '✕';
     closeBtn.setAttribute('aria-label', 'Close player');
 
-    container.append(titleEl, playBtn, currentTimeEl, progressBar, durationEl, closeBtn);
+    volumeIcon = document.createElement('span');
+    volumeIcon.className = 'audio-player-volume-icon';
+    volumeIcon.textContent = '🔊';
+    volumeIcon.title = 'Mute';
+
+    volumeSlider = document.createElement('input');
+    volumeSlider.type = 'range';
+    volumeSlider.className = 'audio-player-volume';
+    volumeSlider.min = '0';
+    volumeSlider.max = '100';
+    volumeSlider.value = '100';
+    volumeSlider.setAttribute('aria-label', 'Volume');
+
+    container.append(titleEl, playBtn, currentTimeEl, progressBar, durationEl, volumeIcon, volumeSlider, closeBtn);
     document.body.appendChild(container);
   }
 
@@ -72,6 +89,8 @@ export function createAudioPlayer() {
       currentTimeEl = null;
       durationEl = null;
       closeBtn = null;
+      volumeSlider = null;
+      volumeIcon = null;
     }
   }
 
@@ -93,6 +112,7 @@ export function createAudioPlayer() {
     const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
     progressBar.value = pct;
     if (currentTimeEl) currentTimeEl.textContent = formatPlayerTime(audio.currentTime);
+    if (onTimeUpdateCb) onTimeUpdateCb(audio.currentTime);
   }
 
   function setProgressFromEvent(e) {
@@ -138,6 +158,30 @@ export function createAudioPlayer() {
 
     closeBtn?.addEventListener('click', close);
 
+    volumeSlider?.addEventListener('input', (e) => {
+      const v = Number(e.target.value) / 100;
+      if (audio) audio.volume = v;
+      if (volumeIcon) {
+        volumeIcon.textContent = v === 0 ? '🔇' : v < 0.5 ? '🔉' : '🔊';
+      }
+      savedVolume = v || 0.01;
+    });
+
+    volumeIcon?.addEventListener('click', () => {
+      if (!audio) return;
+      if (audio.volume > 0) {
+        savedVolume = audio.volume;
+        audio.volume = 0;
+        if (volumeSlider) volumeSlider.value = '0';
+        volumeIcon.textContent = '🔇';
+      } else {
+        const restore = savedVolume > 0 ? savedVolume : 1;
+        audio.volume = restore;
+        if (volumeSlider) volumeSlider.value = String(Math.round(restore * 100));
+        volumeIcon.textContent = restore < 0.5 ? '🔉' : '🔊';
+      }
+    });
+
     progressBar?.addEventListener('input', setProgressFromEvent);
     progressBar?.addEventListener('mousedown', () => { isDragging = true; });
     progressBar?.addEventListener('mouseup', () => { isDragging = false; });
@@ -176,6 +220,9 @@ export function createAudioPlayer() {
     if (durationEl) durationEl.textContent = '0:00';
     if (currentTimeEl) currentTimeEl.textContent = '0:00';
     if (progressBar) progressBar.value = 0;
+    if (volumeSlider) {
+      audio.volume = Number(volumeSlider.value) / 100;
+    }
 
     audio.play().then(() => {
       if (playBtn) playBtn.textContent = '⏸';
@@ -188,6 +235,23 @@ export function createAudioPlayer() {
     /** Play a local File/Blob or a remote URL string */
     play(src, title) {
       startPlayback(src, title);
+    },
+
+    /** Register callback: called every ~250ms with currentTime in seconds */
+    onTimeUpdate(cb) {
+      onTimeUpdateCb = cb;
+    },
+
+    /** Seek to absolute seconds */
+    seek(seconds) {
+      if (audio) {
+        audio.currentTime = seconds;
+      }
+    },
+
+    /** Get current audio element (null if nothing playing) */
+    getAudio() {
+      return audio;
     },
 
     destroy() {

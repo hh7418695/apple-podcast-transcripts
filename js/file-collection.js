@@ -44,11 +44,22 @@ async function inspectFile(file) {
   return info;
 }
 
-async function collectFromFiles(files) {
+async function collectFromFiles(files, onProgress) {
   const relevantFiles = createRelevantFiles();
   const candidateFiles = [...files].filter(file => isRelevantFileName(file.name));
+  const total = candidateFiles.length;
+  let completed = 0;
+
+  if (onProgress) onProgress({ completed: 0, total, phase: 'processing' });
+
   const results = await promiseAllLimit(
-    candidateFiles.map(file => () => inspectFile(file)),
+    candidateFiles.map(file => () =>
+      inspectFile(file).then(result => {
+        completed++;
+        if (onProgress) onProgress({ completed, total, phase: 'processing' });
+        return result;
+      })
+    ),
     FILE_INSPECTION_CONCURRENCY
   );
   for (const info of results) {
@@ -81,17 +92,23 @@ async function collectRelevantFilesFromEntry(entry, files) {
   }
 }
 
-export function collectFromFileList(files) {
-  return collectFromFiles(files);
+export function collectFromFileList(files, onProgress) {
+  return collectFromFiles(files, onProgress);
 }
 
-export async function collectFromDataTransferItems(items) {
+export async function collectFromDataTransferItems(items, onProgress) {
   const candidateFiles = [];
   const tasks = [];
   for (let i = 0; i < items.length; i++) {
     const entry = items[i].webkitGetAsEntry();
     if (entry) tasks.push(() => collectRelevantFilesFromEntry(entry, candidateFiles));
   }
+
+  if (onProgress) onProgress({ completed: 0, total: 0, phase: 'discovering' });
+
   await promiseAllLimit(tasks, FILE_DISCOVERY_CONCURRENCY);
-  return collectFromFiles(candidateFiles);
+
+  if (onProgress) onProgress({ completed: candidateFiles.length, total: candidateFiles.length, phase: 'discovering' });
+
+  return collectFromFiles(candidateFiles, onProgress);
 }

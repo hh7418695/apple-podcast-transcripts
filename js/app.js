@@ -11,6 +11,7 @@ import {
   renderPodcasts,
   showLoadError,
   showLoadingState,
+  updateLoadingProgress,
 } from './renderer.js';
 import { debounce } from './utils.js';
 import { createAudioPlayer } from './audio-player.js';
@@ -75,6 +76,34 @@ function getCompatibilityIssue() {
 
 loadAnalytics();
 
+// ── Theme ──
+function getTheme() {
+  const stored = readLocalStorageValue('podcastTranscriptTheme');
+  if (stored === 'dark' || stored === 'light') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  try { window.localStorage.setItem('podcastTranscriptTheme', next); } catch {}
+  applyTheme(next);
+}
+
+applyTheme(getTheme());
+document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  if (!readLocalStorageValue('podcastTranscriptTheme')) {
+    applyTheme(e.matches ? 'dark' : 'light');
+  }
+});
+
 const compatibilityIssue = getCompatibilityIssue();
 if (compatibilityIssue) {
   document.querySelector('.explanation').innerHTML = `
@@ -89,6 +118,8 @@ const folderSelectBtn = document.getElementById('selectFolderBtn');
 const folderInput = document.getElementById('folderInput');
 const folderSelectionStatus = document.getElementById('folderSelectionStatus');
 const copyTargetPathBtn = document.getElementById('copyTargetPathBtn');
+const sortSelect = document.getElementById('sortSelect');
+const resetBtn = document.getElementById('resetBtn');
 const targetTranscriptPath = '~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts/Library/Cache/Assets/TTML';
 
 let allTranscripts = [];
@@ -108,6 +139,53 @@ function renderCurrentPodcasts(list) {
     openTranscriptPopup: transcriptModal.open,
     audioPlayer,
   });
+}
+
+function sortTranscripts(list, sortBy) {
+  const sorted = [...list];
+  switch (sortBy) {
+    case 'date-asc':
+      sorted.sort((a, b) => a.time - b.time);
+      break;
+    case 'title-asc':
+      sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      break;
+    case 'title-desc':
+      sorted.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+      break;
+    case 'author-asc':
+      sorted.sort((a, b) => (a.author || '').localeCompare(b.author || ''));
+      break;
+    case 'duration-desc':
+      sorted.sort((a, b) => b.duration - a.duration);
+      break;
+    case 'duration-asc':
+      sorted.sort((a, b) => a.duration - b.duration);
+      break;
+    case 'date-desc':
+    default:
+      sorted.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+      break;
+  }
+  return sorted;
+}
+
+function applySortAndRender() {
+  const sortBy = sortSelect?.value || 'date-desc';
+  const q = searchInput.value.trim().toLowerCase();
+  let list = sortTranscripts(allTranscripts, sortBy);
+  if (q) {
+    list = list.filter(t =>
+      (t.title || '').toLowerCase().includes(q) ||
+      (t.author || '').toLowerCase().includes(q) ||
+      (t.description || '').toLowerCase().includes(q)
+    );
+  }
+  renderCurrentPodcasts(list);
+}
+
+if (sortSelect) {
+  sortSelect.addEventListener('change', applySortAndRender);
 }
 
 function folderLabelsFromFileList(files) {
@@ -139,13 +217,34 @@ async function processRelevantFiles(relevantFiles) {
   const result = buildTranscriptMetadata(SQL, relevantFiles);
   allTranscripts = result.transcripts;
   metadataWarningMessage = result.warningMessage;
-  renderCurrentPodcasts(allTranscripts);
+  applySortAndRender();
 }
 
 function beginLoad() {
   metadataWarningMessage = '';
   showLoadingState({ podcasts, searchInput });
   if (folderSelectBtn) folderSelectBtn.textContent = 'Add Folder';
+  if (resetBtn) resetBtn.style.display = '';
+}
+
+function resetAll() {
+  allTranscripts = [];
+  accumulatedFolderFiles = createRelevantFiles();
+  metadataWarningMessage = '';
+  selectedFolderLabels = new Set();
+  document.body.classList.remove('top');
+  document.querySelector('.explanation')?.classList.remove('is-loaded');
+  podcasts.innerHTML = '';
+  searchInput.value = '';
+  if (folderSelectBtn) folderSelectBtn.textContent = 'Select Folder';
+  if (resetBtn) resetBtn.style.display = 'none';
+  if (folderSelectionStatus) folderSelectionStatus.textContent = 'No folders selected yet.';
+  if (sortSelect) sortSelect.value = 'date-desc';
+  audioPlayer.destroy();
+}
+
+if (resetBtn) {
+  resetBtn.addEventListener('click', resetAll);
 }
 
 if (folderSelectBtn && folderInput) {
@@ -160,7 +259,9 @@ if (folderSelectBtn && folderInput) {
     beginLoad();
 
     try {
-      const relevantFiles = await collectFromFileList(files);
+      const relevantFiles = await collectFromFileList(files, (p) =>
+        updateLoadingProgress({ podcasts, ...p })
+      );
       mergeRelevantFiles(accumulatedFolderFiles, relevantFiles);
       for (const label of folderLabelsFromFileList(files)) {
         selectedFolderLabels.add(label);
@@ -200,7 +301,9 @@ dropZone.addEventListener('drop', async (event) => {
   beginLoad();
 
   try {
-    const relevantFiles = await collectFromDataTransferItems(event.dataTransfer.items);
+    const relevantFiles = await collectFromDataTransferItems(event.dataTransfer.items, (p) =>
+      updateLoadingProgress({ podcasts, ...p })
+    );
     accumulatedFolderFiles = relevantFiles;
     selectedFolderLabels = new Set(['dropped folder']);
     await processRelevantFiles(relevantFiles);
@@ -211,17 +314,46 @@ dropZone.addEventListener('drop', async (event) => {
 });
 
 const handleSearchInput = debounce(() => {
-  const q = searchInput.value.trim().toLowerCase();
-  if (!q) {
-    renderCurrentPodcasts(allTranscripts);
-    return;
-  }
-  const filtered = allTranscripts.filter(t =>
-    (t.title || '').toLowerCase().includes(q) ||
-    (t.author || '').toLowerCase().includes(q) ||
-    (t.description || '').toLowerCase().includes(q)
-  );
-  renderCurrentPodcasts(filtered);
+  applySortAndRender();
 }, 175);
 
 searchInput.addEventListener('input', handleSearchInput);
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', (e) => {
+  // Don't intercept when typing in inputs
+  const tag = document.activeElement?.tagName;
+  const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable;
+
+  // / → focus search (only when not in an input)
+  if (e.key === '/' && !isInput && document.body.classList.contains('top')) {
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+    return;
+  }
+
+  // Space → play/pause (only when not in input, modal not open)
+  if (e.key === ' ' && !isInput && !document.body.classList.contains('popupOpen')) {
+    e.preventDefault();
+    const audio = audioPlayer.getAudio();
+    if (audio) {
+      if (audio.paused) {
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    }
+    return;
+  }
+
+  // ArrowLeft/ArrowRight → seek ±5s (only when not in input, modal not open)
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !isInput && !document.body.classList.contains('popupOpen')) {
+    const audio = audioPlayer.getAudio();
+    if (audio) {
+      e.preventDefault();
+      const delta = e.key === 'ArrowLeft' ? -5 : 5;
+      audio.currentTime = Math.max(0, audio.currentTime + delta);
+    }
+  }
+});
